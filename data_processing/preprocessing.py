@@ -11,5 +11,8 @@ usecol = ['id','name','host_id','host_name','host_response_rate','host_is_superh
                     'review_scores_rating','review_scores_cleanliness','license']
 data = pd.read_csv(file,sep=",",usecols= usecol)
 #1 if host have license else 0
-data['license'] = np.where(data['license'] == 'Exempt',0,1)
+filter = data[data["room_type"]!="Private room"]
+
+filter['license'] = np.where(filter['license'] == 'Exempt',0,1)
 print(data.head())
+filter.to_csv('pre_'+file,index=False)
