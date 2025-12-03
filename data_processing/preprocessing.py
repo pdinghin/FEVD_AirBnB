@@ -15,4 +15,4 @@ filter = data[data["room_type"]!="Private room"]
 
 filter['license'] = np.where(filter['license'] == 'Exempt',0,1)
 print(data.head())
-filter.to_csv('pre_'+file,index=False)
+filter.to_csv('data/pre_'+file,index=False)
