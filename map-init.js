@@ -94,6 +94,14 @@ function CSVToArray( strData, strDelimiter ){
     });
 }
 
+function placeMarkers( map, jsonData ) {
+    jsonData.forEach( row => {
+        if (row["illegal"] == 1) {
+            const marker = L.marker([row["latitude"], row["longitude"]]).addTo(map);
+        }
+    });
+}
+
 // Initialize map
 const map = L.map('map').setView([44.84151, -0.56997], 12);
 
@@ -103,13 +111,9 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 
 await fetch("pre_listings_bordeaux.csv").then((response) => response.text()).then((data) => {
-    let arrData = CSVToArray(data, ',');
-    console.log(arrData);
+    let jsonData = CSVToArray(data, ',');
+    placeMarkers(map, jsonData);
 });
-
-// Example marker with popup
-const marker = L.marker([44.84151, -0.56997]).addTo(map)
-    .bindPopup('Coucou !');
 
 const infoContent = document.getElementById('info-content');
 
@@ -125,11 +129,11 @@ map.on('click', function(e) {
     `;
 });
 
-// Example: update info when marker is clicked
+/*// Example: update info when marker is clicked
 marker.on('click', function() {
     infoContent.innerHTML = `
         <div class="info-block"><b>Marker</b></div>
         <div>Location: Paris</div>
         <div>Coordinates: 48.8566, 2.3522</div>
     `;
-});
+});*/
