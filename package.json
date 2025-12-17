@@ -1,0 +1,15 @@
+{
+  "dependencies": {
+    "leaflet": "^1.9.4"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "name": "fevd_airbnb",
+  "description": "## Dependencies",
+  "version": "1.0.0",
+  "main": "server.js",
+  "devDependencies": {},
+  "author": "",
+  "license": "ISC"
+}

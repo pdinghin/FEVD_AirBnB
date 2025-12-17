@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Illegal Airbnbs</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="node_modules/leaflet/dist/leaflet.css" />
+    <script src="node_modules/leaflet/dist/leaflet.js"></script>
+
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+
+        /* Use flex to allocate 3:1 horizontal space (map left, info right) */
+        .page {
+            display: flex;
+            flex-direction: row;
+            height: 100vh; /* full viewport height */
+        }
+
+        #map {
+            flex: 3;          /* three quarters */
+            min-height: 0;    /* allow child to size correctly in flex */
+        }
+
+        #info {
+            flex: 1;          /* one quarter */
+            padding: 12px;
+            box-sizing: border-box;
+            border-left: 1px solid #ddd;
+            background: #fafafa;
+            overflow: auto;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+        }
+
+        /* ensure leaflet map fills its container */
+        #map .leaflet-container, #map {
+            height: 100%;
+            width: 100%;
+        }
+
+        .info-title { font-weight: 600; margin-bottom: 6px; }
+        .info-block { margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div id="map"></div>
+        <div id="info">
+            <div class="info-title">Info Panel</div>
+            <div id="info-content">Click on the map or a marker to see details here.</div>
+        </div>
+    </div>
+    <script type="module" src="./map-init.js"></script>
+</body>
+</html>
