@@ -1,6 +1,4 @@
 // npm-Free Server by The Jared Wilcurt
-// All you need to run this is an installed copy of Node.JS
-// Put this next to the files you want to serve and run: node server.js
 
 // Require in some of the native stuff that comes with Node
 var http = require('http');
@@ -22,7 +20,7 @@ http.createServer(function (request, response) {
     // get the /file.html from above and then find it from the current folder
     var filename = path.join(process.cwd(), uri);
 
-    // Setting up MIME-Type (YOU MAY NEED TO ADD MORE HERE) <--------
+    // Setting up MIME-Type
     var contentTypesByExtension = {
         '.html': 'text/html',
         '.css':  'text/css',
