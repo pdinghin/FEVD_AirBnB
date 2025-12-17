@@ -11,7 +11,6 @@ usecol = ['id','name','host_id','host_name','host_response_rate','host_is_superh
                     'review_scores_rating','review_scores_cleanliness','license']
 data = pd.read_csv(file,sep=",",usecols= usecol)
 filter = data[data["room_type"]!="Private room"].copy()
-
-filter['license'] = np.where(filter['license'] == 'Exempt',0,1)
-filter.loc[:,'illegal'] = np.where((filter['license'] == 0) | (filter['minimum_nights'] > 90) | (filter['maximum_nights'] > 90),1,0)
+filter['license'] = filter['license'].notna().astype(int)
+filter.loc[:,'illegal'] = np.where((filter['license'] == 0) | (filter['minimum_nights'] > 90),1,0)
 filter.to_csv('data/pre_'+file,index=False)
