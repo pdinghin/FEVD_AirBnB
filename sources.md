@@ -1,2 +1,3 @@
 - Les données sur Airbnb ont été récoltées et sont fournies par [Inside Airbnb](https://insideairbnb.com/fr/)
 - [Loi pour les meublés de tourisme en France](https://www.legifrance.gouv.fr/codes/id/LEGISCTA000006158462/)
+- Les données des sections cadastrales sont fournies par [cadastre.data.gouv.fr](https://cadastre.data.gouv.fr/data/etalab-cadastre/2025-09-01/geojson/epcis/243300316/)
