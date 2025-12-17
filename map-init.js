@@ -98,12 +98,18 @@ function placeMarkers( map, jsonData ) {
     jsonData.forEach( row => {
         if (row["illegal"] == 1) {
             const marker = L.marker([row["latitude"], row["longitude"]]).addTo(map);
+            marker.on('click', function() {
+                infoContent.innerHTML = `
+                    <div class="info-block"><b>${row["name"]}</b></div>
+                    <div>${row["price"]}/nuitée</div>
+                `;
+            });
         }
     });
 }
 
 // Initialize map
-const map = L.map('map').setView([44.84151, -0.56997], 12);
+const map = L.map('map').setView([44.84151, -0.56997], 13);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
