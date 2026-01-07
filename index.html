@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Illegal Airbnbs</title>
+    <title>Airbnb visualisation</title>
 
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="node_modules/leaflet/dist/leaflet.css" />
@@ -19,16 +19,16 @@
         .page {
             display: flex;
             flex-direction: row;
-            height: 100vh; /* full viewport height */
+            height: 100vh;
         }
 
         #map {
-            flex: 3;          /* three quarters */
-            min-height: 0;    /* allow child to size correctly in flex */
+            flex: 3;
+            min-height: 0;
         }
 
         #info {
-            flex: 1;          /* one quarter */
+            flex: 1;
             padding: 12px;
             box-sizing: border-box;
             border-left: 1px solid #ddd;
@@ -51,8 +51,8 @@
     <div class="page">
         <div id="map"></div>
         <div id="info">
-            <div class="info-title">Info Panel</div>
-            <div id="info-content">Click on the map or a marker to see details here.</div>
+            <div class="info-title">Informations</div>
+            <div id="info-content">Cliquez sur la carte ou un marqueur pour voir les détails ici.</div>
         </div>
     </div>
     <script type="module" src="./map-init.js"></script>
