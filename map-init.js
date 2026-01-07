@@ -1,3 +1,4 @@
+// function from https://gist.github.com/rakeden/508ca124fabe97eba6d5734f2efcea32
 function CSVToArray( strData, strDelimiter ){
     strDelimiter = (strDelimiter || ",");
 
@@ -64,12 +65,9 @@ function CSVToArray( strData, strDelimiter ){
         } else {
             // We found a non-quoted value.
             var strMatchedValue = arrMatches[ 3 ];
-
         }
 
         if (!isHeaders)
-        // Now that we have our value string, let's add
-        // it to the data array.
             arrData[ arrData.length - 1 ].push( strMatchedValue );
         else
             headers.push( strMatchedValue );
@@ -85,22 +83,20 @@ function CSVToArray( strData, strDelimiter ){
     });
 }
 
-/*
-function placeMarkers( map, jsonData, displayMode = 'price' ) {
+
+/*function placeMarkers( map, jsonData, displayMode = 'price' ) {
     jsonData.forEach( row => {
-        if (row["illegal"] == 1) {
-            const marker = L.marker([row["latitude"], row["longitude"]]).addTo(map);
-            marker.on('click', function() {
-                let content = `<div class="info-block"><b>${row["name"]}</b></div>`;
-                if (displayMode === 'price') {
-                    content += `<div>${row["price"]}/nuitée</div>`;
-                } else if (displayMode === 'reviews') {
-                    content += `<div>Rating: ${row["review_scores_rating"] || 'N/A'}</div>`;
-                    content += `<div>Reviews: ${row["number_of_reviews"] || 0}</div>`;
-                }
-                infoContent.innerHTML = content;
-            });
-        }
+        const marker = L.marker([row["latitude"], row["longitude"]]).addTo(map);
+        marker.on('click', function() {
+            let content = `<div class="info-block"><b>${row["name"]}</b></div>`;
+            if (displayMode === 'price') {
+                content += `<div>${row["price"]}/nuitée</div>`;
+            } else if (displayMode === 'reviews') {
+                content += `<div>Rating: ${row["review_scores_rating"] || 'N/A'}</div>`;
+                content += `<div>Reviews: ${row["number_of_reviews"] || 0}</div>`;
+            }
+            infoContent.innerHTML = content;
+        });
     });
 }*/
 
@@ -144,8 +140,16 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 }).addTo(map);
 
+const infoContent = document.getElementById('info-content');
+
+let previousLayer = null;
+
 function onEachFeature(feature, layer) {
     layer.on('click', function() {
+        if (previousLayer)
+            previousLayer.setStyle({fillColor: null});
+        previousLayer = layer;
+        layer.setStyle({fillColor: 'cyan'});
         infoContent.innerHTML = `
             <div class="info-block"><b>Section</b></div>
             <div>Commune: ${Communes[feature.properties.commune]}</div>
@@ -154,14 +158,20 @@ function onEachFeature(feature, layer) {
     });
 }
 
-await fetch("epci-243300316-sections.json").then((response) => response.json()).then((data) => {
-    L.geoJSON(data, {
-        style: function (feature) {
-            return {color: "#a0497f", weight: 1, fillOpacity: 0.3};
-        },
-        onEachFeature: onEachFeature
-    }).addTo(map);
-});
+async function drawSections(mode) {
+    await fetch("epci-243300316-sections.json").then((response) => response.json()).then((data) => {
+        L.geoJSON(data, {
+            style: function (feature) {
+                if (mode === 'price')
+                    return {color: "#497fa0", weight: 1, fillOpacity: 0.3};
+                else
+                    return {color: "#a0497f", weight: 1, fillOpacity: 0.3};
+            },
+            onEachFeature: onEachFeature
+        }).addTo(map);
+    });
+}
+
 
 let currentJsonData = null;
 let currentDisplayMode = 'price';
@@ -178,6 +188,7 @@ const displaySelector = document.getElementById('display-selector');
 
 displaySelector.addEventListener('change', function() {
     currentDisplayMode = this.value;
+    console.log("Display mode changed to:", currentDisplayMode);
     // Clear existing markers and GeoJSON layers
     map.eachLayer(layer => {
         if (layer instanceof L.Marker || layer instanceof L.GeoJSON) {
@@ -188,4 +199,8 @@ displaySelector.addEventListener('change', function() {
     if (currentJsonData) {
         placeMarkers(map, currentJsonData, currentDisplayMode);
     }
+    drawSections(currentDisplayMode);
 });
+
+// Initial draw
+drawSections(currentDisplayMode);
