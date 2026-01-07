@@ -45,14 +45,38 @@
 
         .info-title { font-weight: 600; margin-bottom: 6px; }
         .info-block { margin-bottom: 8px; }
+
+        #display-selector {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 999;
+            padding: 8px 12px;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        #display-selector:hover {
+            border-color: #999;
+        }
     </style>
 </head>
 <body>
     <div class="page">
-        <div id="map"></div>
+        <div id="map">
+            <select id="display-selector">
+                <option value="price">Prix</option>
+                <option value="reviews">Avis</option>
+            </select>
+        </div>
         <div id="info">
             <div class="info-title">Informations</div>
-            <div id="info-content">Cliquez sur la carte ou un marqueur pour voir les détails ici.</div>
+            <div id="info-content">Cliquez sur une section ou un marqueur pour voir les détails ici.</div>
         </div>
     </div>
     <script type="module" src="./map-init.js"></script>

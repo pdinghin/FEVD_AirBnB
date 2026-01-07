@@ -85,19 +85,24 @@ function CSVToArray( strData, strDelimiter ){
     });
 }
 
-function placeMarkers( map, jsonData ) {
+/*
+function placeMarkers( map, jsonData, displayMode = 'price' ) {
     jsonData.forEach( row => {
         if (row["illegal"] == 1) {
             const marker = L.marker([row["latitude"], row["longitude"]]).addTo(map);
             marker.on('click', function() {
-                infoContent.innerHTML = `
-                    <div class="info-block"><b>${row["name"]}</b></div>
-                    <div>${row["price"]}/nuitée</div>
-                `;
+                let content = `<div class="info-block"><b>${row["name"]}</b></div>`;
+                if (displayMode === 'price') {
+                    content += `<div>${row["price"]}/nuitée</div>`;
+                } else if (displayMode === 'reviews') {
+                    content += `<div>Rating: ${row["review_scores_rating"] || 'N/A'}</div>`;
+                    content += `<div>Reviews: ${row["number_of_reviews"] || 0}</div>`;
+                }
+                infoContent.innerHTML = content;
             });
         }
     });
-}
+}*/
 
 const Communes = {
     "33318": "Pessac",
@@ -158,18 +163,29 @@ await fetch("epci-243300316-sections.json").then((response) => response.json()).
     }).addTo(map);
 });
 
-/*await fetch("pre_listings_bordeaux.csv").then((response) => response.text()).then((data) => {
-    let jsonData = CSVToArray(data, ',');
-    placeMarkers(map, jsonData);
+let currentJsonData = null;
+let currentDisplayMode = 'price';
+
+/*
+// Load and display markers
+await fetch("pre_listings_bordeaux.csv").then((response) => response.text()).then((data) => {
+    currentJsonData = CSVToArray(data, ',');
+    placeMarkers(map, currentJsonData, currentDisplayMode);
 });*/
 
-const infoContent = document.getElementById('info-content');
+// Handle display mode selection
+const displaySelector = document.getElementById('display-selector');
 
-/*// Example: update info when marker is clicked
-marker.on('click', function() {
-    infoContent.innerHTML = `
-        <div class="info-block"><b>Marker</b></div>
-        <div>Location: Paris</div>
-        <div>Coordinates: 48.8566, 2.3522</div>
-    `;
-});*/
+displaySelector.addEventListener('change', function() {
+    currentDisplayMode = this.value;
+    // Clear existing markers and GeoJSON layers
+    map.eachLayer(layer => {
+        if (layer instanceof L.Marker || layer instanceof L.GeoJSON) {
+            map.removeLayer(layer);
+        }
+    });
+    // Redraw with new display mode
+    if (currentJsonData) {
+        placeMarkers(map, currentJsonData, currentDisplayMode);
+    }
+});
