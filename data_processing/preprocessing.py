@@ -41,6 +41,6 @@ def find_properties_id(row):
     return None 
 
 
-data["properties_id"] = data.apply(find_properties_id, axis=1)
+data["section_id"] = data.apply(find_properties_id, axis=1)
 
-data.to_csv("../data/data_with_properties_id.csv", index=False)
+data.to_csv("../data/data_with_section_id.csv", index=False)
