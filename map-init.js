@@ -1,6 +1,4 @@
 function CSVToArray( strData, strDelimiter ){
-    // Check to see if the delimiter is defined. If not,
-    // then default to comma.
     strDelimiter = (strDelimiter || ",");
 
     // Create a regular expression to parse the CSV values.
@@ -17,10 +15,6 @@ function CSVToArray( strData, strDelimiter ){
         ),
         "gi"
         );
-
-
-    // Create an array to hold our data. Give the array
-    // a default empty first row.
     var arrData = [[]];
 
     // Create an array to hold our individual pattern
@@ -55,8 +49,6 @@ function CSVToArray( strData, strDelimiter ){
                 isHeaders = false;
 
         }
-
-
         // Now that we have our delimiter out of the way,
         // let's check to see which kind of value we
         // captured (quoted or unquoted).
@@ -70,7 +62,6 @@ function CSVToArray( strData, strDelimiter ){
                 );
 
         } else {
-
             // We found a non-quoted value.
             var strMatchedValue = arrMatches[ 3 ];
 
@@ -108,6 +99,38 @@ function placeMarkers( map, jsonData ) {
     });
 }
 
+const Communes = {
+    "33318": "Pessac",
+    "33063": "Bordeaux",
+    "33522": "Talence",
+    "33069": "Le Bouscat",
+    "33075": "Bruges",
+    "33032": "Bassens",
+    "33249": "Lormont",
+    "33350": "Cenon",
+    "33449": "Saint-Médard-en-Jalles",
+    "33273": "Martignas-sur-Jalle",
+    "33039": "Bègles",
+    "33192": "Gradignan",
+    "33281": "Mérignac",
+    "33550": "Villenave-d'Ornon",
+    "33004": "Ambès",
+    "33003": "Ambarès-et-Lagrave",
+    "33312": "Parempuyre",
+    "33056": "Blanquefort",
+    "33376": "Saint-Aubin-de-Médoc",
+    "33434": "Saint-Louis-de-Montferrand",
+    "33487": "Saint-Vincent-de-Paul",
+    "33096": "Carbon-Blanc",
+    "33167": "Floirac",
+    "33013": "Artigues-près-Bordeaux",
+    "33119": "Cenon",
+    "33065": "Bouliac",
+    "33200": "Le Haillan",
+    "33162": "Eysines",
+    "33519": "Le Taillan-Médoc"
+};
+
 // Initialize map
 const map = L.map('map').setView([44.84151, -0.56997], 13);
 
@@ -116,24 +139,31 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 }).addTo(map);
 
-await fetch("pre_listings_bordeaux.csv").then((response) => response.text()).then((data) => {
+function onEachFeature(feature, layer) {
+    layer.on('click', function() {
+        infoContent.innerHTML = `
+            <div class="info-block"><b>Section</b></div>
+            <div>Commune: ${Communes[feature.properties.commune]}</div>
+            <div>Code: ${feature.properties.code}</div>
+        `;
+    });
+}
+
+await fetch("epci-243300316-sections.json").then((response) => response.json()).then((data) => {
+    L.geoJSON(data, {
+        style: function (feature) {
+            return {color: "#a0497f", weight: 1, fillOpacity: 0.3};
+        },
+        onEachFeature: onEachFeature
+    }).addTo(map);
+});
+
+/*await fetch("pre_listings_bordeaux.csv").then((response) => response.text()).then((data) => {
     let jsonData = CSVToArray(data, ',');
     placeMarkers(map, jsonData);
-});
+});*/
 
 const infoContent = document.getElementById('info-content');
-
-// Show clicked coordinates and zoom in the info panel
-map.on('click', function(e) {
-    const lat = e.latlng.lat.toFixed(6);
-    const lng = e.latlng.lng.toFixed(6);
-    infoContent.innerHTML = `
-        <div class="info-block"><b>Map clicked</b></div>
-        <div>Latitude: ${lat}</div>
-        <div>Longitude: ${lng}</div>
-        <div>Zoom: ${map.getZoom()}</div>
-    `;
-});
 
 /*// Example: update info when marker is clicked
 marker.on('click', function() {
