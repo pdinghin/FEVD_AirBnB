@@ -2,20 +2,23 @@
 import pandas as pd
 import numpy as np
 import sys
+import pathlib
 
 import json
 from shapely.geometry import shape, Point
 
+PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[1] / "FEVD_AIRBNB"
+DEFAULT_DATA_DIR = PROJECT_ROOT / "data"
 
 csv_file =  sys.argv[1]
 
-geojson_file = "../epci-243300316-sections.json"  
+geojson_file = "epci-243300316-sections.json"  
 
 usecol = [
     'id','name','host_id','host_name','host_response_rate','host_is_superhost',
-    'latitude','longitude','property_type','room_type','bathrooms','bedrooms',
-    'price','minimum_nights','maximum_nights','number_of_reviews',
-    'review_scores_rating','review_scores_cleanliness','license'
+    'host_picture_url''latitude','longitude','property_type','room_type',
+    'bathrooms','bedrooms','beds','price','number_of_reviews',
+    'review_scores_rating','review_scores_cleanliness'
 ]
 
 
@@ -40,7 +43,6 @@ def find_properties_id(row):
 
     return None 
 
-
 data["section_id"] = data.apply(find_properties_id, axis=1)
 
-data.to_csv("../data/data_with_section_id.csv", index=False)
+data.to_csv("data/data_with_section_id.csv", index=False)
