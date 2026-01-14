@@ -158,20 +158,71 @@ function onEachFeature(feature, layer) {
     });
 }
 
-async function drawSections(mode) {
-    await fetch("epci-243300316-sections.json").then((response) => response.json()).then((data) => {
-        L.geoJSON(data, {
-            style: function (feature) {
-                if (mode === 'price')
-                    return {color: "#497fa0", weight: 1, fillOpacity: 0.3};
-                else
-                    return {color: "#a0497f", weight: 1, fillOpacity: 0.3};
-            },
-            onEachFeature: onEachFeature
-        }).addTo(map);
-    });
+let sections = null;
+await fetch("epci-243300316-sections.json").then((response) => response.json()).then((data) => {
+    sections = data;
+});
+
+let sectionStats = null;
+await fetch("bordeaux_final_process.json").then((response) => response.json()).then((data) => {
+    sectionStats = data;
+});
+
+let global_stats = null;
+await fetch("global_stats.json").then((response) => response.json()).then((data) => {
+    global_stats = data;
+});
+
+async function colorSection(feature, mode) {
+    let value = null;
+    if (mode === 'price') {
+        value = sectionStats[feature.properties.id]["avg_price"];
+    } else if (mode === 'ratings') {
+        value = sectionStats[feature.properties.id]["avg_rating"];
+    }
+    for (let i = 0; i < global_stats[mode].length - 1; i++) {
+        const range = global_stats[mode][i];
+        const nextRange = global_stats[mode][i + 1];
+        if (value >= range && value < nextRange) {
+            const colorScale = i / (global_stats[mode].length - 1);
+            const red = Math.floor(255 * colorScale);
+            const green = Math.floor(255 * (1 - colorScale));
+            return {
+                fillColor: `rgb(${red}, ${green}, 0)`,
+                weight: 1,
+                opacity: 1,
+                color: 'white',
+                fillOpacity: 0.7
+            };
+        }
+    }
+    // If value is above the last range
+    const lastIndex = global_stats[mode].length - 1;
+    if (value >= global_stats[mode][lastIndex]) {
+        return {
+            fillColor: `rgb(255, 0, 0)`,
+            weight: 1,
+            opacity: 1,
+            color: 'white',
+            fillOpacity: 0.7
+        };
+    }
+    // Default style
+    return {
+        fillColor: 'gray',
+        weight: 1,
+        opacity: 1,
+        color: 'white',
+        fillOpacity: 0.7
+    };
 }
 
+async function drawSections(mode) {
+    L.geoJSON(sections, {
+        style: (feature) => colorSection(feature, mode),
+        onEachFeature: onEachFeature
+    }).addTo(map);
+}
 
 let currentJsonData = null;
 let currentDisplayMode = 'price';
