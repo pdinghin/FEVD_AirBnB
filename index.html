@@ -64,6 +64,44 @@
         #display-selector:hover {
             border-color: #999;
         }
+
+        #legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 998;
+            max-width: 200px;
+        }
+
+        .legend-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .legend-color {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            margin-right: 8px;
+            border: 1px solid #999;
+        }
+
+        .legend-label {
+            font-size: 11px;
+        }
     </style>
 </head>
 <body>
@@ -71,8 +109,10 @@
         <div id="map">
             <select id="display-selector">
                 <option value="price" selected>Prix</option>
+                <option value="price_per_bed">Prix par lit</option>
                 <option value="rating">Avis</option>
             </select>
+            <div id="legend"></div>
         </div>
         <div id="info">
             <div class="info-title">Informations</div>

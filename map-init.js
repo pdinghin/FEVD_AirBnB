@@ -189,6 +189,8 @@ function colorSection(feature, mode) {
     let value = null;
     if (mode === 'price') {
         value = sectionStats[feature.properties.id]["avg_price"];
+    } else if (mode === 'price_per_bed') {
+        value = sectionStats[feature.properties.id]["avg_price_per_bed"];
     } else if (mode === 'rating') {
         value = sectionStats[feature.properties.id]["avg_rating"];
     }
@@ -197,7 +199,7 @@ function colorSection(feature, mode) {
         const nextRange = global_stats[mode][i + 1];
         if (value >= range && value < nextRange) {
             let fillColor = null;
-            if (mode === 'price') {
+            if (mode === 'price' || mode === 'price_per_bed') {
                fillColor = colorMap[i];
             } else if (mode === 'rating') {
                fillColor = colorMap[global_stats[mode].length - 2 - i];
@@ -215,7 +217,7 @@ function colorSection(feature, mode) {
     const lastIndex = global_stats[mode].length - 1;
     if (value >= global_stats[mode][lastIndex]) {
         let fillColor = null;
-            if (mode === 'price') {
+            if (mode === 'price' || mode === 'price_per_bed') {
                fillColor = `DarkViolet`
             } else if (mode === 'rating') {
                fillColor = `cyan`
@@ -247,6 +249,65 @@ async function drawSections(mode) {
 
 let currentJsonData = null;
 let currentDisplayMode = 'price';
+let percentiles = ["0%", "15%", "30%", "45%", "60%", "75%", "90%", "95%", "100%"];
+
+function formatLegendValue(val, mode, i = null) {
+    if (mode === 'price' || mode === 'price_per_bed') {
+        // Round to nearest multiple of 5 for prices
+        return Math.round(val / 5) * 5;
+    } else {
+        // Round to nearest 0.05 (5%) for ratings
+        return percentiles[i];
+    }
+}
+
+function updateLegend(mode) {
+    const legendDiv = document.getElementById('legend');
+    const ranges = global_stats[mode];
+    
+    let legendHTML = `<div class="legend-title">${mode === 'price' ? 'Prix moyen (€)' : mode === 'price_per_bed' ? 'Prix par lit (€)' : 'Avis moyen\n (% top des meilleures notes)'}</div>`;
+    
+    for (let i = 0; i < ranges.length - 1; i++) {
+        let color = null;
+        if (mode === 'price' || mode === 'price_per_bed') {
+            color = colorMap[i];
+        } else if (mode === 'rating') {
+            color = colorMap[ranges.length - 2 - i];
+        }
+        
+        const minVal = ranges[i];
+        const maxVal = ranges[i + 1];
+        const label = `${formatLegendValue(minVal, mode, i)} - ${formatLegendValue(maxVal, mode, i + 1)}`;
+        
+        legendHTML += `
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: ${color};"></div>
+                <div class="legend-label">${label}</div>
+            </div>
+        `;
+    }
+    
+    // Add top range
+    const lastIndex = ranges.length - 1;
+    const topColor = (mode === 'price' || mode === 'price_per_bed') ? 'DarkViolet' : 'cyan';
+    const topLabel = `≥ ${formatLegendValue(ranges[lastIndex], mode, lastIndex)}`;
+    legendHTML += `
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: ${topColor};"></div>
+            <div class="legend-label">${topLabel}</div>
+        </div>
+    `;
+    
+    // Add no data
+    legendHTML += `
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: gray;"></div>
+            <div class="legend-label">Pas de données</div>
+        </div>
+    `;
+    
+    legendDiv.innerHTML = legendHTML;
+}
 
 
 // Load and display markers
@@ -292,6 +353,7 @@ displaySelector.addEventListener('change', function() {
     });
     
     drawSections(currentDisplayMode);
+    updateLegend(currentDisplayMode);
     // Redraw with new display mode
     if (currentJsonData) {
         //placeMarkers(map, currentJsonData, currentDisplayMode);
@@ -300,3 +362,4 @@ displaySelector.addEventListener('change', function() {
 
 // Initial draw
 drawSections(currentDisplayMode);
+updateLegend(currentDisplayMode);
