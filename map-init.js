@@ -83,23 +83,6 @@ function CSVToArray( strData, strDelimiter ){
     });
 }
 
-
-/*function placeMarkers( map, jsonData, displayMode = 'price' ) {
-    jsonData.forEach( row => {
-        const marker = L.marker([row["latitude"], row["longitude"]]).addTo(map);
-        marker.on('click', function() {
-            let content = `<div class="info-block"><b>${row["name"]}</b></div>`;
-            if (displayMode === 'price') {
-                content += `<div>${row["price"]}/nuitée</div>`;
-            } else if (displayMode === 'reviews') {
-                content += `<div>Rating: ${row["review_scores_rating"] || 'N/A'}</div>`;
-                content += `<div>Reviews: ${row["number_of_reviews"] || 0}</div>`;
-            }
-            infoContent.innerHTML = content;
-        });
-    });
-}*/
-
 const Communes = {
     "33318": "Pessac",
     "33063": "Bordeaux",
@@ -143,18 +126,33 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 const infoContent = document.getElementById('info-content');
 
 let previousLayer = null;
+let previousFeature = null;
 
 function onEachFeature(feature, layer) {
     layer.on('click', function() {
+        // reset the color of the previous clicked layer
         if (previousLayer)
-            previousLayer.setStyle({fillColor: null});
+            previousLayer.setStyle(colorSection(previousFeature, currentDisplayMode));
         previousLayer = layer;
-        layer.setStyle({fillColor: 'cyan'});
-        infoContent.innerHTML = `
+        previousFeature = feature;
+        layer.setStyle({fillColor: 'pink'});
+
+        if (sectionStats[feature.properties.id] === undefined) {
+            infoContent.innerHTML = `
             <div class="info-block"><b>Section</b></div>
             <div>Commune: ${Communes[feature.properties.commune]}</div>
-            <div>Code: ${feature.properties.code}</div>
+            <div>Code de la section cadastrale: ${feature.properties.code}</div>
+            <div>Aucun Airbnb enregistré dans cette section ou les données sont manquantes.</div>
         `;
+        } else {
+            infoContent.innerHTML = `
+                <div class="info-block"><b>Section</b></div>
+                <div>Commune: ${Communes[feature.properties.commune]}</div>
+                <div>Code de la section cadastrale: ${feature.properties.code}</div>
+                <div>Prix moyen: ${sectionStats[feature.properties.id]['avg_price']}</div>
+                <div>Avis moyen: ${sectionStats[feature.properties.id]['avg_rating']}</div>
+            `;
+        }
     });
 }
 
@@ -173,22 +171,41 @@ await fetch("global_stats.json").then((response) => response.json()).then((data)
     global_stats = data;
 });
 
-async function colorSection(feature, mode) {
+const colorMap = ['green', 'limegreen', 'greenyellow', 'yellow', 'orange', 'red', 'darkred'];
+
+function colorSection(feature, mode) {
+    // if no data
+    if (sectionStats[feature.properties.id] === undefined) {
+        // Default style
+        return {
+            fillColor: 'gray',
+            weight: 1,
+            opacity: 1,
+            color: 'white',
+            fillOpacity: 0.7
+        };
+    }
+
     let value = null;
     if (mode === 'price') {
         value = sectionStats[feature.properties.id]["avg_price"];
-    } else if (mode === 'ratings') {
+    } else if (mode === 'price_per_bed') {
+        value = sectionStats[feature.properties.id]["avg_price_per_bed"];
+    } else if (mode === 'rating') {
         value = sectionStats[feature.properties.id]["avg_rating"];
     }
     for (let i = 0; i < global_stats[mode].length - 1; i++) {
         const range = global_stats[mode][i];
         const nextRange = global_stats[mode][i + 1];
         if (value >= range && value < nextRange) {
-            const colorScale = i / (global_stats[mode].length - 1);
-            const red = Math.floor(255 * colorScale);
-            const green = Math.floor(255 * (1 - colorScale));
+            let fillColor = null;
+            if (mode === 'price' || mode === 'price_per_bed') {
+               fillColor = colorMap[i];
+            } else if (mode === 'rating') {
+               fillColor = colorMap[global_stats[mode].length - 2 - i];
+            }
             return {
-                fillColor: `rgb(${red}, ${green}, 0)`,
+                fillColor: fillColor,
                 weight: 1,
                 opacity: 1,
                 color: 'white',
@@ -196,25 +213,31 @@ async function colorSection(feature, mode) {
             };
         }
     }
-    // If value is above the last range
+    // If value is above the last range (top 5%)
     const lastIndex = global_stats[mode].length - 1;
     if (value >= global_stats[mode][lastIndex]) {
+        let fillColor = null;
+            if (mode === 'price' || mode === 'price_per_bed') {
+               fillColor = `DarkViolet`
+            } else if (mode === 'rating') {
+               fillColor = `cyan`
+            }
         return {
-            fillColor: `rgb(255, 0, 0)`,
+            fillColor: fillColor,
             weight: 1,
             opacity: 1,
             color: 'white',
             fillOpacity: 0.7
         };
     }
-    // Default style
+
     return {
-        fillColor: 'gray',
-        weight: 1,
-        opacity: 1,
-        color: 'white',
-        fillOpacity: 0.7
-    };
+            fillColor: 'gray',
+            weight: 1,
+            opacity: 1,
+            color: 'white',
+            fillOpacity: 0.7
+        };
 }
 
 async function drawSections(mode) {
@@ -226,13 +249,95 @@ async function drawSections(mode) {
 
 let currentJsonData = null;
 let currentDisplayMode = 'price';
+let percentiles = ["0%", "15%", "30%", "45%", "60%", "75%", "90%", "95%", "100%"];
 
-/*
+function formatLegendValue(val, mode, i = null) {
+    if (mode === 'price' || mode === 'price_per_bed') {
+        // Round to nearest multiple of 5 for prices
+        return Math.round(val / 5) * 5;
+    } else {
+        // Round to nearest 0.05 (5%) for ratings
+        return percentiles[i];
+    }
+}
+
+function updateLegend(mode) {
+    const legendDiv = document.getElementById('legend');
+    const ranges = global_stats[mode];
+    
+    let legendHTML = `<div class="legend-title">${mode === 'price' ? 'Prix moyen (€)' : mode === 'price_per_bed' ? 'Prix par lit (€)' : 'Avis moyen\n (% top des meilleures notes)'}</div>`;
+    
+    for (let i = 0; i < ranges.length - 1; i++) {
+        let color = null;
+        if (mode === 'price' || mode === 'price_per_bed') {
+            color = colorMap[i];
+        } else if (mode === 'rating') {
+            color = colorMap[ranges.length - 2 - i];
+        }
+        
+        const minVal = ranges[i];
+        const maxVal = ranges[i + 1];
+        const label = `${formatLegendValue(minVal, mode, i)} - ${formatLegendValue(maxVal, mode, i + 1)}`;
+        
+        legendHTML += `
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: ${color};"></div>
+                <div class="legend-label">${label}</div>
+            </div>
+        `;
+    }
+    
+    // Add top range
+    const lastIndex = ranges.length - 1;
+    const topColor = (mode === 'price' || mode === 'price_per_bed') ? 'DarkViolet' : 'cyan';
+    const topLabel = `≥ ${formatLegendValue(ranges[lastIndex], mode, lastIndex)}`;
+    legendHTML += `
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: ${topColor};"></div>
+            <div class="legend-label">${topLabel}</div>
+        </div>
+    `;
+    
+    // Add no data
+    legendHTML += `
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: gray;"></div>
+            <div class="legend-label">Pas de données</div>
+        </div>
+    `;
+    
+    legendDiv.innerHTML = legendHTML;
+}
+
+
 // Load and display markers
 await fetch("pre_listings_bordeaux.csv").then((response) => response.text()).then((data) => {
     currentJsonData = CSVToArray(data, ',');
-    placeMarkers(map, currentJsonData, currentDisplayMode);
-});*/
+    console.log(currentJsonData);
+});
+
+const customIcon = L.icon({
+        iconUrl: 'marker_icon.png',
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+        popupAnchor: [0, -32]
+    });
+
+function placeMarkers( map, jsonData, displayMode = 'price' ) {
+    jsonData.forEach( row => {
+        const marker = L.marker([row["latitude"], row["longitude"]], { icon: customIcon }).addTo(map);
+        marker.on('click', function() {
+            let content = `<div class="info-block"><b>${row["name"]}</b></div>`;
+            if (displayMode === 'price') {
+                content += `<div>${row["price"]}/nuitée</div>`;
+            } else if (displayMode === 'rating') {
+                content += `<div>Rating: ${row["review_scores_rating"] || 'N/A'}</div>`;
+                content += `<div>Reviews: ${row["number_of_reviews"] || 0}</div>`;
+            }
+            infoContent.innerHTML += content;
+        });
+    });
+}
 
 // Handle display mode selection
 const displaySelector = document.getElementById('display-selector');
@@ -246,12 +351,15 @@ displaySelector.addEventListener('change', function() {
             map.removeLayer(layer);
         }
     });
+    
+    drawSections(currentDisplayMode);
+    updateLegend(currentDisplayMode);
     // Redraw with new display mode
     if (currentJsonData) {
-        placeMarkers(map, currentJsonData, currentDisplayMode);
+        //placeMarkers(map, currentJsonData, currentDisplayMode);
     }
-    drawSections(currentDisplayMode);
 });
 
 // Initial draw
 drawSections(currentDisplayMode);
+updateLegend(currentDisplayMode);
