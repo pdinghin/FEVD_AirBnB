@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import sys
 import pathlib
-
 import json
 from shapely.geometry import shape, Point
 
@@ -15,10 +14,10 @@ csv_file =  sys.argv[1]
 geojson_file = "epci-243300316-sections.json"  
 
 usecol = [
-    'id','name','host_id','host_name','host_response_rate','host_is_superhost',
-    'host_picture_url''latitude','longitude','property_type','room_type',
-    'bathrooms','bedrooms','beds','price','number_of_reviews',
-    'review_scores_rating','review_scores_cleanliness'
+    'id','name','host_id','host_name','host_response_rate',
+    'host_is_superhost', 'host_picture_url','latitude','longitude','neighbourhood_cleansed',
+    'neighbourhood_group_cleansed','property_type','room_type','bathrooms','bedrooms','beds','price',
+    'number_of_reviews', 'review_scores_rating','review_scores_cleanliness'
 ]
 
 
@@ -44,5 +43,17 @@ def find_properties_id(row):
     return None 
 
 data["section_id"] = data.apply(find_properties_id, axis=1)
+
+data['price'] = (
+    data['price']
+    .astype(str)                   
+    .str.replace('€', '', regex=False)
+    .str.replace('$', '', regex=False)
+    .str.replace(',', '.', regex=False)
+    .str.strip()                   
+)
+
+data['price'] = pd.to_numeric(data['price'], errors='coerce')
+data['price_per_bed'] = data['price'].div(data['beds'].replace(0, pd.NA))
 
 data.to_csv("data/data_with_section_id.csv", index=False)
