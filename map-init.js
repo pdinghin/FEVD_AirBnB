@@ -1,88 +1,3 @@
-// function from https://gist.github.com/rakeden/508ca124fabe97eba6d5734f2efcea32
-function CSVToArray( strData, strDelimiter ){
-    strDelimiter = (strDelimiter || ",");
-
-    // Create a regular expression to parse the CSV values.
-    var objPattern = new RegExp(
-        (
-            // Delimiters.
-            "(\\" + strDelimiter + "|\\r?\\n|\\r|^)" +
-
-            // Quoted fields.
-            "(?:\"([^\"]*(?:\"\"[^\"]*)*)\"|" +
-
-            // Standard fields.
-            "([^\"\\" + strDelimiter + "\\r\\n]*))"
-        ),
-        "gi"
-        );
-    var arrData = [[]];
-
-    // Create an array to hold our individual pattern
-    // matching groups.
-    var arrMatches = null;
-
-    var headers = [];
-
-    var isHeaders = true;
-
-    // Keep looping over the regular expression matches
-    // until we can no longer find a match.
-    while (arrMatches = objPattern.exec( strData )){
-
-        // Get the delimiter that was found.
-        var strMatchedDelimiter = arrMatches[ 1 ];
-
-        // Check to see if the given delimiter has a length
-        // (is not the start of string) and if it matches
-        // field delimiter. If id does not, then we know
-        // that this delimiter is a row delimiter.
-        if (
-            strMatchedDelimiter.length &&
-            (strMatchedDelimiter != strDelimiter)
-            ){
-
-            // Since we have reached a new row of data,
-            // add an empty row to our data array.
-            if (!isHeaders)
-                arrData.push( [] );
-            else 
-                isHeaders = false;
-
-        }
-        // Now that we have our delimiter out of the way,
-        // let's check to see which kind of value we
-        // captured (quoted or unquoted).
-        if (arrMatches[ 2 ]){
-
-            // We found a quoted value. When we capture
-            // this value, unescape any double quotes.
-            var strMatchedValue = arrMatches[ 2 ].replace(
-                new RegExp( "\"\"", "g" ),
-                "\""
-                );
-
-        } else {
-            // We found a non-quoted value.
-            var strMatchedValue = arrMatches[ 3 ];
-        }
-
-        if (!isHeaders)
-            arrData[ arrData.length - 1 ].push( strMatchedValue );
-        else
-            headers.push( strMatchedValue );
-    }
-    
-    // convert to JSON
-    return arrData.map(row => {
-        const rowObject = {};
-        row.forEach((value, index) => {
-            rowObject[headers[index]] = value;
-        });
-        return rowObject
-    });
-}
-
 const Communes = {
     "33318": "Pessac",
     "33063": "Bordeaux",
@@ -132,7 +47,7 @@ function onEachFeature(feature, layer) {
     layer.on('click', function() {
         // reset the color of the previous clicked layer
         if (previousLayer)
-            previousLayer.setStyle(colorSection(previousFeature, currentDisplayMode));
+            previousLayer.setStyle(colorSection(previousFeature, currentMode));
         previousLayer = layer;
         previousFeature = feature;
         layer.setStyle({fillColor: 'pink'});
@@ -149,25 +64,27 @@ function onEachFeature(feature, layer) {
                 <div class="info-block"><b>Section</b></div>
                 <div>Commune: ${Communes[feature.properties.commune]}</div>
                 <div>Code de la section cadastrale: ${feature.properties.code}</div>
-                <div>Prix moyen: ${sectionStats[feature.properties.id]['avg_price']}</div>
-                <div>Avis moyen: ${sectionStats[feature.properties.id]['avg_rating']}</div>
+                <div>Prix moyen: ${sectionStats[feature.properties.id]['avg_price']}€</div>
+                <div>Avis moyen: ${sectionStats[feature.properties.id]['avg_rating']}/5</div>
+                <div>Prix moyen par lit: ${Number(sectionStats[feature.properties.id]['avg_price_per_bed']).toFixed(2)}€</div>
+                <div>Nombre total d'Airbnb: ${sectionStats[feature.properties.id]['num_source']}</div>
             `;
         }
     });
 }
 
 let sections = null;
-await fetch("epci-243300316-sections.json").then((response) => response.json()).then((data) => {
+await fetch("./data/epci-243300316-sections.json").then((response) => response.json()).then((data) => {
     sections = data;
 });
 
 let sectionStats = null;
-await fetch("bordeaux_final_process.json").then((response) => response.json()).then((data) => {
+await fetch("./data/bordeaux_final_process.json").then((response) => response.json()).then((data) => {
     sectionStats = data;
 });
 
 let global_stats = null;
-await fetch("global_stats.json").then((response) => response.json()).then((data) => {
+await fetch("./data/global_stats.json").then((response) => response.json()).then((data) => {
     global_stats = data;
 });
 
@@ -247,9 +164,7 @@ async function drawSections(mode) {
     }).addTo(map);
 }
 
-let currentJsonData = null;
-let currentDisplayMode = 'price';
-let percentiles = ["0%", "15%", "30%", "45%", "60%", "75%", "90%", "95%", "100%"];
+const percentiles = ["0%", "15%", "30%", "45%", "60%", "75%", "90%", "95%", "100%"];
 
 function formatLegendValue(val, mode, i = null) {
     if (mode === 'price' || mode === 'price_per_bed') {
@@ -309,57 +224,112 @@ function updateLegend(mode) {
     legendDiv.innerHTML = legendHTML;
 }
 
-
-// Load and display markers
-await fetch("pre_listings_bordeaux.csv").then((response) => response.text()).then((data) => {
-    currentJsonData = CSVToArray(data, ',');
-    console.log(currentJsonData);
-});
-
-const customIcon = L.icon({
+const customIconDefault = L.icon({
         iconUrl: 'marker_icon.png',
-        iconSize: [32, 32],
-        iconAnchor: [16, 32],
-        popupAnchor: [0, -32]
+        iconSize: [10, 10],
+        iconAnchor: [5, 10],
+        popupAnchor: [0, -10]
     });
 
-function placeMarkers( map, jsonData, displayMode = 'price' ) {
-    jsonData.forEach( row => {
-        const marker = L.marker([row["latitude"], row["longitude"]], { icon: customIcon }).addTo(map);
-        marker.on('click', function() {
-            let content = `<div class="info-block"><b>${row["name"]}</b></div>`;
-            if (displayMode === 'price') {
-                content += `<div>${row["price"]}/nuitée</div>`;
-            } else if (displayMode === 'rating') {
-                content += `<div>Rating: ${row["review_scores_rating"] || 'N/A'}</div>`;
-                content += `<div>Reviews: ${row["number_of_reviews"] || 0}</div>`;
-            }
-            infoContent.innerHTML += content;
+const customIconHighlight = L.icon({
+        iconUrl: 'marker_icon_highlight.png',
+        iconSize: [30, 30],
+        iconAnchor: [15, 30],
+        popupAnchor: [0, -30]
+    });
+
+let lastMarker = null;
+
+function placeMarkers( map, mode = 'price', displayMode = 'high',  ) {
+    Object.values(sectionStats).forEach( section => {
+        let listings = section["top_" + mode + "_" + displayMode];
+        if (!listings || listings.length === 0) {
+            return;
+        }
+        Object.values(listings).forEach( listing => {
+            const marker = L.marker([listing["latitude"], listing["longitude"]], { icon: customIconDefault }).addTo(map);
+            marker.on('click', function() {
+                let content = `<div class="info-block"><b>${listing["name"]}</b></div>`;
+                    content += `<div>Prix/nuitée: ${listing["price"]}€</div>`;
+                    content += `<div>Prix/lit: ${Number(listing["price_per_bed"]).toFixed(2) || 'N/A'}€</div>`;
+                    content += `<div>Lits: ${listing["bedrooms"] || 0}</div>`;
+                    content += `<div>Note moyenne: ${listing["review_scores_rating"] || 'N/A'}/5</div>`;
+                    content += `<div>Nombre d'avis: ${listing["number_of_reviews"] || 0}</div>`;
+                    if (listing["room_type"] === "Entire home/apt") {
+                        content += `<div>Type de logement: Logement entier</div>`;
+                    } else if (listing["room_type"] === "Private room") {
+                        content += `<div>Type de logement: Chambre privée</div>`;
+                    } else if (listing["room_type"] === "Shared room") {
+                        content += `<div>Type de logement: Chambre partagée</div>`;
+                    }
+                    content += `<div><a href="https://www.airbnb.com/rooms/${listing["id"]}" target="_blank">Voir l'annonce Airbnb</a></div>`;
+                    content += `<div><br>Photo de profil de l'hôte:</div>`;
+                    content += `<div><img src="${listing["host_picture_url"]}" alt="Listing Image" width="60%"></div>`;
+                infoContent.innerHTML = content;
+                marker.setIcon(customIconHighlight);
+                if (lastMarker && lastMarker !== marker) {
+                    lastMarker.setIcon(customIconDefault);
+                }
+                lastMarker = marker;
+            });
         });
     });
 }
-
 // Handle display mode selection
-const displaySelector = document.getElementById('display-selector');
+let currentDisplayMode = 'high';
+let currentMode = 'price';
+let showMarkers = false;
+const markerModeSelector = document.getElementById('display-mode-selector');
+const modeSelector = document.getElementById('mode-selector');
+const toggleMarkersCheckbox = document.getElementById('toggle-markers');
 
-displaySelector.addEventListener('change', function() {
+toggleMarkersCheckbox.addEventListener('change', function() {
+    showMarkers = this.checked;
+    console.log("Show markers:", showMarkers);
+    // Clear existing markers
+    map.eachLayer(layer => {
+        if (layer instanceof L.Marker) {
+            map.removeLayer(layer);
+        }
+    });
+    // Redraw markers if enabled
+    if (showMarkers) {
+        placeMarkers(map, currentMode, currentDisplayMode);
+    }
+});
+
+markerModeSelector.addEventListener('change', function() {
     currentDisplayMode = this.value;
-    console.log("Display mode changed to:", currentDisplayMode);
+    console.log("Marker display mode changed to:", currentDisplayMode);
+    if (!showMarkers) return;
+    // Clear existing markers
+    map.eachLayer(layer => {
+        if (layer instanceof L.Marker) {
+            map.removeLayer(layer);
+        }
+    });
+    // Redraw markers with new display mode
+    placeMarkers(map, currentMode, currentDisplayMode);
+});
+
+
+modeSelector.addEventListener('change', function() {
+    currentMode = this.value;
+    console.log("Display mode changed to:", currentMode);
     // Clear existing markers and GeoJSON layers
     map.eachLayer(layer => {
         if (layer instanceof L.Marker || layer instanceof L.GeoJSON) {
             map.removeLayer(layer);
         }
     });
-    
-    drawSections(currentDisplayMode);
-    updateLegend(currentDisplayMode);
     // Redraw with new display mode
-    if (currentJsonData) {
-        //placeMarkers(map, currentJsonData, currentDisplayMode);
-    }
+    drawSections(currentMode);
+    updateLegend(currentMode);
+    
+    if (showMarkers)
+        placeMarkers(map, currentMode, currentDisplayMode);
 });
 
 // Initial draw
-drawSections(currentDisplayMode);
-updateLegend(currentDisplayMode);
+drawSections(currentMode);
+updateLegend(currentMode);
