@@ -11,7 +11,7 @@ DEFAULT_DATA_DIR = PROJECT_ROOT / "data"
 
 csv_file =  sys.argv[1]
 
-geojson_file = "epci-243300316-sections.json"  
+geojson_file = "data/epci-243300316-sections.json"  
 
 usecol = [
     'id','name','host_id','host_name','host_response_rate',

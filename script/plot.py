@@ -4,13 +4,17 @@ import matplotlib.patches as mpatches
 from sklearn.preprocessing import MinMaxScaler
 import numpy as np
 import itertools
+import seaborn as sns
 import sys
 
 filename = sys.argv[1]
 
+
+
+#Plot régression linéaire
 df = pd.read_csv(filename)
 
-
+df = df[df['neighbourhood_cleansed'] == "Centre ville (Bordeaux)"]
 df['price_per_bed'] = pd.to_numeric(df['price_per_bed'], errors='coerce')
 df['review_scores_rating'] = pd.to_numeric(df['review_scores_rating'], errors='coerce')
 
@@ -27,98 +31,116 @@ x_line = np.linspace(x.min(), x.max(), 100)
 y_line = poly(x_line)
 
 plt.figure(figsize=(8, 6))
-plt.scatter(x, y, alpha=0.5, label="Données")
+plt.scatter(x, y, alpha=0.5, label="Logement airbnb")
 plt.plot(x_line, y_line, color='red', linewidth=2, label="Régression linéaire")
-
+plt.ylim(bottom= 0,top=400)
+plt.xlim(left=0.4,right=1)
 plt.xlabel("Note normalisée (review_scores_rating)")
-plt.ylabel("Prix par lit")
-plt.title("Prix par lit vs Note (normalisée)")
+plt.ylabel("Prix par lit pour une nuit en euros")
 plt.grid(True)
 plt.legend()
-
-plt.savefig("prix_vs_notes_regression.png", dpi=300, bbox_inches="tight")
-plt.show()
+plt.savefig("data/prix_vs_notes_regression.png", dpi=300, bbox_inches="tight")
 
 
 
 
+#Boxplot prix moyen par commune
+df = pd.read_csv(filename)
 
 
-df_box = df.dropna(subset=['neighbourhood_cleansed', 'neighbourhood_group_cleansed', 'price'])
-medians = df_box.groupby('neighbourhood_cleansed')['price'].median().sort_values()
-neighbourhoods = medians.index.tolist()
-data = [df_box[df_box['neighbourhood_cleansed'] == n]['price'] for n in neighbourhoods]
-neighbourhood_groups = [df_box[df_box['neighbourhood_cleansed'] == n]['neighbourhood_group_cleansed'].iloc[0] for n in neighbourhoods]
+order = df.groupby('neighbourhood_group_cleansed')['price_per_bed'].mean().sort_values().index
 
-plt.figure(figsize=(14, 6))
-unique_groups = list(dict.fromkeys(neighbourhood_groups))
-colors_cycle = itertools.cycle(plt.cm.tab20.colors)
-colors_map = {group: next(colors_cycle) for group in unique_groups}
-box = plt.boxplot(data, tick_labels=neighbourhoods, patch_artist=True, showfliers=False)
-for patch, group in zip(box['boxes'], neighbourhood_groups):
-    patch.set_facecolor(colors_map.get(group, "gray"))
-for median in box['medians']:
-    median.set_color('black')
-    median.set_linewidth(2)
-handles = [mpatches.Patch(color=colors_map[group], label=group) for group in unique_groups]
-plt.legend(handles=handles, title="Neighbourhood Group", bbox_to_anchor=(1.05, 1), loc='upper left')
-
-plt.xlabel("Neighbourhood")
-plt.ylabel("Prix")
-plt.title("Distribution des prix par quartier (trié par médiane)")
-plt.xticks(rotation=45, ha="right")
-plt.grid(True, axis='y')
-
-plt.savefig("boxplot_prix_par_quartier_trie.png", dpi=300, bbox_inches="tight")
-plt.close()
+plt.figure(figsize=(12,6))
+sns.boxplot(data=df, x='neighbourhood_group_cleansed', y='price_per_bed', order=order, showfliers=False)
+plt.xlabel("Nom de Commune")
+plt.ylabel("Prix pour un lit pour une nuit en euros")
+plt.xticks(rotation=90)  
+plt.grid(axis='y', linestyle='--', alpha=0.7)
+plt.tight_layout()
+plt.savefig("data/Prix par commune")
 
 
 
+#Prix par rapport au room_type
+df = pd.read_csv(filename)
+
+df['price_per_bed'] = pd.to_numeric(df['price_per_bed'], errors='coerce')
+df = df.dropna(subset=['price_per_bed', 'room_type'])
+order = (
+    df.groupby('room_type')['price_per_bed']
+    .mean()
+    .sort_values()
+    .index
+)
+plt.figure(figsize=(8,6))
+sns.boxplot(
+    data=df,
+    x='room_type',
+    y='price_per_bed',
+    order=order,
+    showfliers=False
+)
+
+plt.xlabel("Type de logement")
+plt.ylabel("Prix pour un lit par nuit en euros")
+plt.grid(axis='y', linestyle='--', alpha=0.7)
+
+plt.tight_layout()
+plt.savefig("data/prix_vs_room_type_trie.png", dpi=300)
 
 
-df_bdx = df[df['neighbourhood_group_cleansed'] == "Bordeaux"]
 
+df = pd.read_csv(filename)
 
-if df_bdx.empty:
-    print("Aucune donnée pour Bordeaux !")
-else:
+# Nettoyage
+df['price_per_bed'] = pd.to_numeric(df['price_per_bed'], errors='coerce')
+df['review_scores_rating'] = pd.to_numeric(df['review_scores_rating'], errors='coerce')
 
-    neighbourhoods_info = df_bdx.groupby('neighbourhood_cleansed').first().reset_index()
-    neighbourhoods_info = neighbourhoods_info.sort_values('host_location')
+df = df.dropna(subset=[
+    'price_per_bed',
+    'review_scores_rating',
+    'neighbourhood_group_cleansed'
+])
 
+# Agrégation
+grouped = (
+    df.groupby('neighbourhood_group_cleansed')
+    .agg(
+        avg_price_per_bed=('price_per_bed', 'mean'),
+        avg_rating=('review_scores_rating', 'mean'),
+        count=('price_per_bed', 'count')
+    )
+)
 
-    neighbourhoods = neighbourhoods_info['neighbourhood_cleansed'].tolist()
-    host_locations = neighbourhoods_info['neighbourhood_group_cleansed'].tolist()
-    data = [df_bdx[df_bdx['neighbourhood_cleansed'] == n]['price'] for n in neighbourhoods]
+# Ratio qualité / prix
+grouped['quality_price_ratio'] = (
+    grouped['avg_rating'] / grouped['avg_price_per_bed']
+)
 
-    plt.figure(figsize=(12, 6))
+# 🔹 Normalisation entre 0 et 1
+scaler = MinMaxScaler()
+grouped['quality_price_ratio_norm'] = scaler.fit_transform(
+    grouped[['quality_price_ratio']]
+)
 
+# Tri
+grouped_sorted = grouped.sort_values(
+    'quality_price_ratio_norm',
+    ascending=False
+)
 
-    unique_locations = list(dict.fromkeys(host_locations))
-    import itertools
-    colors_cycle = itertools.cycle(plt.cm.tab20.colors)
-    colors_map = {loc: next(colors_cycle) for loc in unique_locations}
+# Plot
+plt.figure(figsize=(12,6))
+sns.barplot(
+    x=grouped_sorted.index,
+    y=grouped_sorted['quality_price_ratio_norm']
+)
 
-    box = plt.boxplot(data, tick_labels=neighbourhoods, patch_artist=True, showfliers=False)
+plt.xticks(rotation=45, ha='right')
+plt.xlabel("Commune")
+plt.ylabel("Rapport Note / prix par lit (normalisé 0–1)")
+plt.grid(axis='y', linestyle='--', alpha=0.7)
 
-    for patch, loc in zip(box['boxes'], host_locations):
-        patch.set_facecolor(colors_map[loc])
-
-    for median in box['medians']:
-        median.set_color('black')
-        median.set_linewidth(2)
-
-    plt.xlabel("Neighbourhood")
-    plt.ylabel("Prix")
-    plt.title("Distribution des prix par quartier à Bordeaux (couleur = host_location)")
-    plt.xticks(rotation=45, ha="right")
-    plt.grid(True, axis='y')
-
-
-    import matplotlib.patches as mpatches
-    handles = [mpatches.Patch(color=colors_map[loc], label=loc) for loc in unique_locations]
-    plt.legend(handles=handles, title="Host Location", bbox_to_anchor=(1.05, 1), loc='upper left')
-
-    plt.savefig("boxplot_prix_bordeaux.png", dpi=300, bbox_inches="tight")
-    plt.close()
+plt.tight_layout()
+plt.savefig("data/qualite_prix_par_quartier_normalise.png", dpi=300)
 
