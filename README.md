@@ -22,6 +22,20 @@ Install dependencies and environment for the python scripts
 bash env.sh
 ```
 
+Preprocessing data (you need to download listinfs_bordeaux.csv)
+```bash
+python3 data_processing/preprocessing.py listings_bordeaux.csv
+```
+
+Processing data (need preprocessing data)
+```bash
+python3 data_processing/processing.py  data/data_with_section_id.csv
+```
+
+Build graph (need processing data)
+```bash
+python3 script/plot.py data/data_with_section_id.csv 
+```
 Launch server
 ```bash
 node server.js
