@@ -1,10 +1,10 @@
 # FEVD_AirBnB
 
 ## Sources
-- Les données sur Airbnb ont été récoltées et sont fournies par [Inside Airbnb](https://insideairbnb.com/fr/)
-- [Loi pour les meublés de tourisme en France](https://www.legifrance.gouv.fr/codes/id/LEGISCTA000006158462/)
-- Les données des sections cadastrales sont fournies par [cadastre.data.gouv.fr](https://cadastre.data.gouv.fr/data/etalab-cadastre/2025-09-01/geojson/epcis/243300316/)
-- Le serveur http provient de [TheJaredWilcurt sur github](https://github.com/TheJaredWilcurt/npm-Free-Server)
+- Data about Airbnb has benn gathered and is provided by [Inside Airbnb](https://insideairbnb.com/fr/)
+- [French law concerning furnished tourist accomodations](https://www.legifrance.gouv.fr/codes/id/LEGISCTA000006158462/)
+- Bordeaux's land registry is provided by [cadastre.data.gouv.fr](https://cadastre.data.gouv.fr/data/etalab-cadastre/2025-09-01/geojson/epcis/243300316/)
+- The web server comes from [TheJaredWilcurt sur github](https://github.com/TheJaredWilcurt/npm-Free-Server)
 
 ## Dependencies
 
